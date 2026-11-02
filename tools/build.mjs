@@ -25,7 +25,7 @@ const LANG_BY_EXT = {
   ".go": "go", ".java": "java", ".kt": "kotlin", ".c": "c", ".h": "c",
   ".cc": "cpp", ".cpp": "cpp", ".hpp": "cpp", ".rs": "rust", ".swift": "swift",
   ".rb": "ruby", ".php": "php", ".cs": "csharp", ".sql": "sql", ".sh": "bash",
-  ".lua": "lua", ".scala": "scala",
+  ".lua": "lua", ".scala": "scala", ".diff": "diff", ".patch": "diff",
 };
 
 const b64url = (bytes) => Buffer.from(bytes).toString("base64url");
