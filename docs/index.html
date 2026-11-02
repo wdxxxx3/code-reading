@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>代码阅读</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --gutter: #9ca3af;
+    --accent: #2563eb;
+    --accent-text: #ffffff;
+    --code-size: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115;
+      --surface: #161a20;
+      --text: #e6e8eb;
+      --muted: #9aa3ad;
+      --border: #262c35;
+      --gutter: #5b6470;
+      --accent: #3b82f6;
+      --accent-text: #ffffff;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  button { font: inherit; cursor: pointer; border-radius: 8px; }
+  .primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border: 0;
+    padding: 10px 22px;
+    font-weight: 500;
+  }
+  .primary:hover { filter: brightness(1.06); }
+  .primary:disabled { opacity: .6; cursor: default; }
+
+  .center {
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+  }
+  .card h1 { font-size: 20px; margin: 0 0 8px; font-weight: 600; }
+  .card p { color: var(--muted); margin: 0 0 24px; }
+
+  #reader { display: none; height: 100%; flex-direction: column; }
+  body.reading #reader { display: flex; }
+  body.reading #intro { display: none; }
+  header {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  header .title { font-weight: 600; font-size: 14px; }
+  .sizer { display: flex; gap: 6px; }
+  .sizer button {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 2px 10px;
+    font-size: 13px;
+  }
+  .sizer button:hover { color: var(--text); }
+  .scroll { flex: 1; overflow: auto; background: var(--surface); }
+  .code {
+    display: flex;
+    min-width: max-content;
+    padding: 16px 0 48px;
+    font: var(--code-size)/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  .code pre { margin: 0; font: inherit; }
+  .gutter {
+    flex: none;
+    text-align: right;
+    color: var(--gutter);
+    padding: 0 16px 0 20px;
+    border-right: 1px solid var(--border);
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+  }
+  .src { padding: 0 24px 0 16px; }
+  .src code.hljs { background: transparent; padding: 0; overflow: visible; }
+
+  #pause {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  body.paused #pause { display: block; }
+  body.paused #reader { visibility: hidden; }
+  #pause .card p { margin-bottom: 20px; }
+  #pause .card p:last-child { margin-bottom: 0; }
+
+  @media print { body * { display: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="intro" class="center">
+  <div class="card" id="introCard">
+    <h1>代码阅读</h1>
+    <p>准备好后进入全屏开始。阅读过程中可以随时和面试官交流。</p>
+    <button class="primary" id="startBtn" disabled>加载中…</button>
+  </div>
+</div>
+
+<div id="reader">
+  <header>
+    <span class="title">代码阅读</span>
+    <span class="sizer">
+      <button id="smaller" aria-label="缩小字号">A−</button>
+      <button id="larger" aria-label="放大字号">A+</button>
+    </span>
+  </header>
+  <div class="scroll">
+    <div class="code">
+      <pre class="gutter" id="gutter" aria-hidden="true"></pre>
+      <pre class="src"><code id="src"></code></pre>
+    </div>
+  </div>
+</div>
+
+<div id="pause">
+  <div class="center">
+    <div class="card">
+      <h1 id="pauseTitle">已暂停</h1>
+      <p id="pauseText">点击继续阅读</p>
+      <p><button class="primary" id="resumeBtn">继续</button></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  // ---------- 读取并解密题目 ----------
+  // 链接格式：.../#<题目编号>.<密钥>。# 后面的部分不会发给服务器。
+  function b64url(s) {
+    s = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    var bin = atob(s), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function invalid() {
+    $("introCard").innerHTML = "<h1>链接无效</h1><p style='margin:0'>请向面试官确认链接。</p>";
+  }
+
+  var code = null;
+
+  function load() {
+    var parts = location.hash.slice(1).split(".");
+    var id = parts[0], k = parts[1];
+    if (!/^[A-Za-z0-9_-]{6,40}$/.test(id || "") || !/^[A-Za-z0-9_-]{43}$/.test(k || "") ||
+        !window.crypto || !crypto.subtle) {
+      return invalid();
+    }
+    var keyP = crypto.subtle.importKey("raw", b64url(k), "AES-GCM", false, ["decrypt"]);
+    var fileP = fetch("p/" + id + ".json", { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); });
+    Promise.all([keyP, fileP])
+      .then(function (res) {
+        var f = res[1];
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64url(f.iv) }, res[0], b64url(f.ct));
+      })
+      .then(function (buf) {
+        code = JSON.parse(new TextDecoder().decode(buf));
+        $("startBtn").disabled = false;
+        $("startBtn").textContent = "全屏开始";
+      })
+      .catch(invalid);
+  }
+  load();
+  // 同一个页面里只改了 # 后面的部分时浏览器不会刷新，这里手动刷新一次
+  window.addEventListener("hashchange", function () { location.reload(); });
+
+  function render() {
+    var text = String(code.code).replace(/\r\n?/g, "\n").replace(/\n$/, "");
+    var n = text.split("\n").length, nums = [];
+    for (var i = 1; i <= n; i++) nums.push(i);
+    $("gutter").textContent = nums.join("\n");
+    $("src").textContent = text;
+    highlight();
+  }
+
+  // 高亮脚本异步加载，先到先用；加载不出来就显示纯文本
+  var highlighted = false;
+  function highlight() {
+    var el = $("src");
+    if (highlighted || !code || !el.textContent) return;
+    if (window.hljs && code.lang && hljs.getLanguage(code.lang)) {
+      el.className = "language-" + code.lang;
+      hljs.highlightElement(el);
+      highlighted = true;
+    }
+  }
+  window.__hl = highlight;
+
+  // ---------- 全屏 ----------
+  var fsSupported = !!(document.documentElement.requestFullscreen ||
+                       document.documentElement.webkitRequestFullscreen);
+
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function enterFullscreen() {
+    var el = document.documentElement;
+    try {
+      var p = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen();
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  }
+
+  function onFsChange() {
+    if (!started) return;
+    setReason("fs", !isFullscreen());
+  }
+  document.addEventListener("fullscreenchange", onFsChange);
+  document.addEventListener("webkitfullscreenchange", onFsChange);
+
+  // ---------- 开始 ----------
+  var started = false;
+  $("startBtn").addEventListener("click", function () {
+    if (!code) return;
+    render();
+    started = true;
+    document.body.classList.add("reading");
+    if (fsSupported) enterFullscreen();
+  });
+
+  // ---------- 暂停 / 继续 ----------
+  var reasons = {};
+
+  function anyReason() {
+    for (var k in reasons) if (reasons[k]) return true;
+    return false;
+  }
+
+  function setReason(name, on) {
+    reasons[name] = on;
+    if (!started) return;
+    document.body.classList.toggle("paused", anyReason());
+    if (reasons.fs) {
+      $("pauseTitle").textContent = "已退出全屏";
+      $("pauseText").textContent = "回到全屏后继续阅读";
+      $("resumeBtn").textContent = "回到全屏";
+    } else {
+      $("pauseTitle").textContent = "已暂停";
+      $("pauseText").textContent = "点击继续阅读";
+      $("resumeBtn").textContent = "继续";
+    }
+  }
+
+  $("pause").addEventListener("click", function () {
+    setReason("keys", false);
+    if (reasons.fs && fsSupported) enterFullscreen();
+    if (document.hasFocus()) setReason("blur", false);
+  });
+
+  window.addEventListener("blur", function () { setReason("blur", true); });
+  window.addEventListener("focus", function () {
+    setReason("keys", false);
+    setReason("blur", false);
+  });
+  document.addEventListener("visibilitychange", function () {
+    setReason("hidden", document.hidden);
+  });
+
+  // ---------- 复制、右键、快捷键 ----------
+  function block(e) { e.preventDefault(); }
+  ["copy", "cut", "contextmenu", "selectstart", "dragstart"].forEach(function (t) {
+    document.addEventListener(t, block);
+  });
+
+  document.addEventListener("keydown", function (e) {
+    var k = (e.key || "").toLowerCase();
+    var mod = e.metaKey || e.ctrlKey;
+
+    // ⌘⇧（Mac 截图）或 Win+⇧（Windows 截图）一按下就先把内容藏起来
+    if (e.metaKey && e.shiftKey) setReason("keys", true);
+
+    if (k === "f12" || (mod && e.shiftKey && (k === "i" || k === "j" || k === "c")) ||
+        (e.metaKey && e.altKey && (k === "i" || k === "j" || k === "c" || k === "u"))) {
+      e.preventDefault();
+      return;
+    }
+    if (mod && !e.altKey && !e.shiftKey && "cxaspu".indexOf(k) !== -1 && k.length === 1) {
+      e.preventDefault();
+    }
+  });
+
+  document.addEventListener("keyup", function (e) {
+    if (!(e.metaKey && e.shiftKey)) setReason("keys", false);
+  });
+
+  // ---------- 字号 ----------
+  var size = 14;
+  function setSize(s) {
+    size = Math.max(11, Math.min(22, s));
+    document.documentElement.style.setProperty("--code-size", size + "px");
+  }
+  $("smaller").addEventListener("click", function () { setSize(size - 1); });
+  $("larger").addEventListener("click", function () { setSize(size + 1); });
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" async onload="window.__hl && window.__hl()"></script>
+</body>
+</html>
